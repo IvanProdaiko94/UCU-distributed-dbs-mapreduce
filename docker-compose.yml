@@ -1,0 +1,8 @@
+version: '3'
+services:
+  master:
+    env_file:
+      - config.env
+  slave:
+    env_file:
+      - config.env
