@@ -1,45 +1,12 @@
-const events = require('events');
+const fs = require('fs');
+const http2 = require('http2');
 
-const opts = {
-  port: process.env['MASTER_PORT']
-};
+const readEnv = require('read-env');
 
-class Master extends events.EventEmitter {
-  constructor() {
-    super();
-    this.slaves = [];
-  }
+const config = Object.assign(
+  readEnv.default({prefix: 'MASTER'}),
+  readEnv.default({prefix: 'MAPPER'}),
+  {exclusive:true}
+);
 
-  registerSlave(slave) {
-    this.slaves.push(slave);
-    slave
-      .on('error', err => {
-        slave.destroy(err);
-      })
-      .on('data', () => {
-
-      })
-      .on('end', () => {
-
-      })
-      .on('close', () => {
-        console.log('CONNECTION CLOSED')
-      });
-  }
-
-  registerMapper(mapper) {
-    this.slaves.forEach(slave => {
-      slave.write()
-    });
-  }
-
-  start() {
-    jayson.tcp()
-  }
-
-  abort() {
-
-  }
-}
-
-new Master().start();
+const mapperFile = fs.readFileSync(config.file).toString();

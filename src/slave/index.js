@@ -1,24 +1,12 @@
+const http2 = require('http2');
 const vm = require('vm');
-const net = require('net');
-const events = require('events');
 
-class Slave extends events.EventEmitter {
-  constructor() {
-    super();
-    this.master = null;
-  }
+const readEnv = require('read-env');
 
-  register() {
+const config = Object.assign(
+  readEnv.default({prefix: 'MASTER'}),
+  readEnv.default({prefix: 'SLAVE'})
+);
 
-  }
-
-  start(code) {
-    vm.createContext()
-  }
-
-  abort() {
-
-  }
-}
-
-new Slave().start();
+const ctx = vm.createContext({console});
+let mapper = '';
