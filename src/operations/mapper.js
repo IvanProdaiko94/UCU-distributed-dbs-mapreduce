@@ -2,7 +2,14 @@ const events = require('events');
 
 class Mapper extends events.EventEmitter {
 
-  map(key, val) {
+  constructor() {
+    super();
+    this.on('item', (val, i) => {
+      map(val, i)
+    })
+  }
+
+  map(val, i) {
 
   }
 

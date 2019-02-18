@@ -6,6 +6,12 @@ const wsutils = require('../utils/ws');
 
 const config = readEnv.default({prefix: 'APP'});
 
+const ctx = vm.createContext({
+  require: function () {
+    return require('events')
+  }
+});
+
 let mapper = '';
 
 console.log(`Connecting to ws://${config.masterHost}:${config.masterPort}`);
@@ -34,7 +40,8 @@ ws.on('message', function incoming(data) {
       mapper = msg.payload.executable;
       return;
     case 'start':
-      const ctx = vm.createContext({console});
+      const m = vm.runInContext(mapper, ctx);
+
       return;
     default:
       wsutils.send(ws,{

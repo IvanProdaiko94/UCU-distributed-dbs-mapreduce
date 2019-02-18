@@ -1,8 +1,13 @@
 const events = require('events');
 
 class Grouper extends events.EventEmitter {
-  groupBy(key, val) {
+  constructor() {
+    super();
+    this.state = {}
+  }
 
+  groupBy(key, val) {
+    return
   }
 }
 

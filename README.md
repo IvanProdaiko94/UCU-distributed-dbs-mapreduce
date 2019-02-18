@@ -8,4 +8,6 @@ You will need two env variable set:
 
 `PRE_DATASET_PATH` - path to dataset
 `PRE_OUT_DIR` - path to output dir
-`PRE_PARTITIONING_FACTOR` - number of files to split to
+`PRE_PARTITIONING_FACTOR` - number of files to split dataset to.
+
+Dataset is taken [from](https://www.kaggle.com/gyani95/380000-lyrics-from-metrolyrics)
