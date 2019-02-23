@@ -1,13 +1,17 @@
 const http = require('http');
 const fs = require('fs');
+const url = require('url');
+
+const colors = require('colors/safe');
 const WebSocket = require('ws');
 const readEnv = require('read-env');
 
 const wsutils = require('../utils/ws');
+const reducer = require('../operations/reduce');
 
 const config = readEnv.default({prefix: 'APP'});
 
-const mapperFile = fs.readFileSync(config.mapperFile).toString();
+const mapFile = fs.readFileSync(config.mapFile).toString();
 
 const wss = new WebSocket.Server({ host: config.masterHost, port: config.masterPort }, (err) => {
   if (err != null) {
@@ -16,8 +20,10 @@ const wss = new WebSocket.Server({ host: config.masterHost, port: config.masterP
   console.log(`Web Socket server started on address ws://${config.masterHost}:${config.masterPort}`)
 });
 
+const results = [];
+
 wss.on('connection', function connection(ws) {
-  console.log('connection');
+  console.log(`connection opened. Current number of connections is ${wss.clients.size}`);
   ws.on('message', function incoming(message) {
     let msg;
     try {
@@ -32,9 +38,20 @@ wss.on('connection', function connection(ws) {
         wsutils.send(ws, {
           message: 'register',
           payload: {
-            executable: mapperFile
+            executable: mapFile,
+            id: wss.clients.size - 1
           }
         });
+        return;
+      case 'result':
+        results.push(msg.payload);
+        if (config.slaveReplicationFactor === results.length) {
+          console.log(
+            colors.green(
+              reducer(results)
+            )
+          );
+        }
         return;
       default:
         wsutils.send(ws,{
@@ -44,14 +61,6 @@ wss.on('connection', function connection(ws) {
     }
   });
 });
-
-wss.broadcast = function(data) {
-  wss.clients.forEach(function each(client) {
-    if (client.readyState === WebSocket.OPEN) {
-      wsutils.send(client, data);
-    }
-  });
-};
 
 setTimeout(() => {
   if (config.slaveReplicationFactor !== wss.clients.size) {
@@ -64,11 +73,13 @@ setTimeout(() => {
   const server = http.createServer((req, res) => {
     const urlParts = url.parse(req.url);
     if (req.method === 'POST' && urlParts.pathname === '/start') {
-      wss.broadcast({
+      wsutils.broadcast(wss, {
         message: 'start',
         payload: null
       })
     }
+    res.writeHead(204);
+    res.end();
   });
   server.listen(config.masterPort + 1, config.masterHost, (err) => {
     if (err != null) {
