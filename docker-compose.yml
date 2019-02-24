@@ -1,8 +1,57 @@
 version: '3'
 services:
+  preprocessor:
+    image: preprocessor
+    build:
+      context: .
+      dockerfile: docker/preprocessor/Dockerfile
+      args:
+        PRE_DATASET_PATH: ./data/lyrics.csv
+        PRE_PARTITIONING_FACTOR: 10
+        PRE_OUTPUT_DIR: ./data
+    volumes:
+      - data-volume:/app/data
+
   master:
+    image: master
+    build:
+      context: .
+      dockerfile: ./docker/master/Dockerfile
     env_file:
-      - config.env
-  slave:
+      - ./config.env
+    command: ['node', './src/master/']
+    ports:
+      - 8080:8080
+    networks:
+      - backend
+    depends_on:
+      - preprocessor
+
+  worker:
+    image: worker
+    build:
+      context: .
+      dockerfile: ./docker/worker/Dockerfile
     env_file:
-      - config.env
+      - ./config.env
+    command: ['node', './src/worker/']
+    deploy:
+      replicas: 10
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 100M
+      restart_policy:
+        condition: on-failure
+    networks:
+      - backend
+    volumes:
+      - data-volume:/app/data
+    depends_on:
+      - master
+
+networks:
+  backend:
+    driver: "bridge"
+volumes:
+  data-volume:

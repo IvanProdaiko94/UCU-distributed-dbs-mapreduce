@@ -4,8 +4,9 @@ WORKDIR app
 
 COPY package.json package-lock.json ./
 
-COPY ./src/master ./src/master
+COPY ./src/worker ./src/worker
 COPY ./src/utils ./src/utils
-COPY ./src/operations ./src/operations
+
+COPY ./data ./data
 
 RUN npm i
