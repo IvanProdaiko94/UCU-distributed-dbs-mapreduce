@@ -23,7 +23,15 @@ services:
     ports:
       - 8080:8080
     networks:
-      - backend
+      - webnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 200M
+      restart_policy:
+        condition: none
     depends_on:
       - preprocessor
 
@@ -36,22 +44,21 @@ services:
       - ./config.env
     command: ['node', './src/worker/']
     deploy:
-      replicas: 10
+      replicas: 1
       resources:
         limits:
           cpus: "0.1"
           memory: 100M
       restart_policy:
-        condition: on-failure
+        condition: none
     networks:
-      - backend
+      - webnet
     volumes:
       - data-volume:/app/data
     depends_on:
       - master
 
 networks:
-  backend:
-    driver: "bridge"
+  webnet:
 volumes:
   data-volume:

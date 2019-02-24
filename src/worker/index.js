@@ -21,7 +21,7 @@ let IN_PROCESS = false;
 const mapper = thr2_map({objectMode: true}, (chunk) => map.runInNewContext({element: chunk}));
 const grouper = thr2_reduce({objectMode: true}, (previous, current) => groupBy.runInNewContext({previous, current}), {});
 
-const masterUri = `ws://${config.masterHost}:${config.masterPort}`;
+const masterUri = `ws://${config.masterServiceHost}:${config.masterPort}`;
 
 console.log(`Connecting to ${masterUri}`);
 const ws = new WebSocket(masterUri, {perMessageDeflate: false});
@@ -62,10 +62,10 @@ ws.on('message', (data) => {
       console.log(`start mapping of ${id}`);
       streamToPromise(
         fs.createReadStream(`./data/${id}.csv`)
-        .pipe(csv({quote: '"'}))
-        .pipe(mapper)
-        .pipe(tap(() => console.log(`Map: processing of data in ${id}`)))
-        .pipe(grouper)
+          .pipe(csv({quote: '"'}))
+          .pipe(mapper)
+          .pipe(tap(() => console.log(`Map: processing of data in ${id}`)))
+          .pipe(grouper)
       )
         .then(([result]) => {
           wsutils.send(ws, {

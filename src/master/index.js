@@ -56,6 +56,9 @@ wss.on('connection', (ws) => {
           console.log(colors.green(finalResult));
         }
         return;
+      case events.ERROR:
+        console.error(msg.payload.error);
+        return;
       default:
         wsutils.send(ws,{
           message: events.NOT_FOUND,
@@ -75,6 +78,7 @@ setTimeout(() => {
 
   const server = http.createServer((req, res) => {
     const urlParts = url.parse(req.url);
+    console.log(`Got http request. Method: ${req.method}. Path: ${urlParts.pathname}`);
     let status = 404;
     if (req.method === 'POST' && urlParts.pathname === '/start') {
       console.log(colors.blue('Send "START" event to workers'));
@@ -96,6 +100,7 @@ setTimeout(() => {
     res.writeHead(status);
     res.end();
   });
+
   server.listen(config.masterHttpPort, config.masterHost, (err) => {
     if (err != null) {
       throw err
