@@ -1,17 +1,18 @@
 const http = require('http');
 const fs = require('fs');
 const url = require('url');
-
 const colors = require('colors/safe');
 const WebSocket = require('ws');
 const readEnv = require('read-env');
-
-const wsutils = require('../utils/ws');
 const reducer = require('../operations/reduce');
+const wsutils = require('../utils/ws');
+const events = require('../utils/events');
 
 const config = readEnv.default({prefix: 'APP'});
+console.log(`Process started with config: ${JSON.stringify(config, null, 2)}`);
 
-const mapFile = fs.readFileSync(config.mapFile).toString();
+const mapFile = fs.readFileSync(config.mapperFile).toString();
+const groupByFile = fs.readFileSync(config.grouperFile).toString();
 
 const wss = new WebSocket.Server({ host: config.masterHost, port: config.masterPort }, (err) => {
   if (err != null) {
@@ -22,9 +23,11 @@ const wss = new WebSocket.Server({ host: config.masterHost, port: config.masterP
 
 const results = [];
 
-wss.on('connection', function connection(ws) {
+let finalResult;
+
+wss.on('connection', (ws) => {
   console.log(`connection opened. Current number of connections is ${wss.clients.size}`);
-  ws.on('message', function incoming(message) {
+  ws.on('message', (message) => {
     let msg;
     try {
       msg = JSON.parse(message)
@@ -34,28 +37,28 @@ wss.on('connection', function connection(ws) {
     }
     console.log(msg);
     switch (msg.message) {
-      case 'register':
+      case events.REGISTER:
         wsutils.send(ws, {
-          message: 'register',
+          message: events.REGISTER,
           payload: {
-            executable: mapFile,
+            executable: {
+              mapFile,
+              groupByFile
+            },
             id: wss.clients.size - 1
           }
         });
         return;
-      case 'result':
+      case events.RESULT:
         results.push(msg.payload);
         if (config.slaveReplicationFactor === results.length) {
-          console.log(
-            colors.green(
-              reducer(results)
-            )
-          );
+          finalResult = reducer(results);
+          console.log(colors.green(finalResult));
         }
         return;
       default:
         wsutils.send(ws,{
-          message: 'not found',
+          message: events.NOT_FOUND,
           payload: null
         })
     }
@@ -65,26 +68,38 @@ wss.on('connection', function connection(ws) {
 setTimeout(() => {
   if (config.slaveReplicationFactor !== wss.clients.size) {
     wss.close(() => {
-      console.error(`Replica factor is not appropriate. Expect: ${config.slaveReplicationFactor}, got: ${wss.clients.size}`);
+      console.error(`Replication factor is not appropriate. Expect: ${config.slaveReplicationFactor}, got: ${wss.clients.size}`);
       process.exit(1);
     });
   }
 
   const server = http.createServer((req, res) => {
     const urlParts = url.parse(req.url);
+    let status = 404;
     if (req.method === 'POST' && urlParts.pathname === '/start') {
+      console.log(colors.blue('Send "START" event to workers'));
       wsutils.broadcast(wss, {
-        message: 'start',
+        message: events.START,
         payload: null
-      })
+      });
+      status = 204;
+    } else if (req.method === 'GET' && urlParts.pathname === '/result') {
+      if (finalResult !== undefined) {
+        res.setHeader("Content-Type", "application/json");
+        res.writeHead(200);
+        res.end(JSON.stringify(finalResult, null, 2));
+        return;
+      } else {
+        status = 202;
+      }
     }
-    res.writeHead(204);
+    res.writeHead(status);
     res.end();
   });
-  server.listen(config.masterPort + 1, config.masterHost, (err) => {
+  server.listen(config.masterHttpPort, config.masterHost, (err) => {
     if (err != null) {
       throw err
     }
-    console.log(`Http server started on address http://${config.masterHost}:${config.masterPort + 1}`);
+    console.log(`Http server started on address http://${config.masterHost}:${config.masterHttpPort}`);
   });
 }, config.initialDelay * 1000);

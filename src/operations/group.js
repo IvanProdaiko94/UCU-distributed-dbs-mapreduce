@@ -1,7 +1,6 @@
-module.exports = (prop) => {
-  return (previous, current) => {
-    const prevVal = previous[current[prop]];
-    previous[current[prop]] = prevVal ? prevVal + 1 : 1;
-    return previous
-  };
-};
+(function (previous, current) {
+  const prop = 'genre';
+  const prevVal = previous[current[prop]];
+  previous[current[prop]] = prevVal ? prevVal + 1 : 1;
+  return previous
+})(previous, current);
