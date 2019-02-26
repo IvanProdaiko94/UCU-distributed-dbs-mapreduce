@@ -64,7 +64,7 @@ ws.on('message', (data) => {
         fs.createReadStream(`./data/${id}.csv`)
           .pipe(csv({quote: '"'}))
           .pipe(mapper)
-          .pipe(tap(() => console.log(`Map: processing of data in ${id}`)))
+          .pipe(tap(() => console.log(`${Date.now()} Map: processing of data in ${id}`)))
           .pipe(grouper)
       )
         .then(([result]) => {

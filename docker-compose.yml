@@ -22,6 +22,7 @@ services:
     command: ['node', './src/master/']
     ports:
       - 8080:8080
+      - 3000:3000
     networks:
       - webnet
     deploy:
@@ -31,7 +32,7 @@ services:
           cpus: "0.2"
           memory: 200M
       restart_policy:
-        condition: none
+        condition: on-failure
     depends_on:
       - preprocessor
 
@@ -44,13 +45,13 @@ services:
       - ./config.env
     command: ['node', './src/worker/']
     deploy:
-      replicas: 1
+      replicas: 10
       resources:
         limits:
           cpus: "0.1"
           memory: 100M
       restart_policy:
-        condition: none
+        condition: on-failure
     networks:
       - webnet
     volumes:
