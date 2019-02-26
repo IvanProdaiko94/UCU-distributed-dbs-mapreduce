@@ -1,4 +1,3 @@
-const vm = require('vm');
 const fs = require('fs');
 const WebSocket = require('ws');
 const readEnv = require('read-env');
@@ -7,6 +6,7 @@ const thr2_map = require('through2-map');
 const csv = require('csv-streamify');
 const streamToPromise = require('stream-to-promise');
 const tap = require('tap-stream');
+const requireFromString = require('require-from-string');
 const wsutils = require('../utils/ws');
 const events = require('../utils/events');
 
@@ -18,8 +18,8 @@ let groupBy;
 let id;
 let IN_PROCESS = false;
 
-const mapper = thr2_map({objectMode: true}, (chunk) => map.runInNewContext({element: chunk}));
-const grouper = thr2_reduce({objectMode: true}, (previous, current) => groupBy.runInNewContext({previous, current}), {});
+const mapper = thr2_map({objectMode: true}, (chunk) => map(chunk));
+const grouper = thr2_reduce({objectMode: true}, (previous, current) => groupBy(previous, current), {});
 
 const masterUri = `ws://${config.masterServiceHost}:${config.masterPort}`;
 
@@ -46,8 +46,8 @@ ws.on('message', (data) => {
     case events.REGISTER:
       id = msg.payload.id;
       const executable = msg.payload.executable;
-      map = new vm.Script(executable.mapFile);
-      groupBy = new vm.Script(executable.groupByFile);
+      map = requireFromString(executable.mapFile);
+      groupBy = requireFromString(executable.groupByFile);
       return;
     case events.START:
       if (IN_PROCESS) {
