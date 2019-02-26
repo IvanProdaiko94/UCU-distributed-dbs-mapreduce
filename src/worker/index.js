@@ -26,11 +26,28 @@ const masterUri = `ws://${config.masterServiceHost}:${config.masterPort}`;
 console.log(`Connecting to ${masterUri}`);
 const ws = new WebSocket(masterUri, {perMessageDeflate: false});
 
+function heartbeat() {
+  clearTimeout(this.pingTimeout);
+
+  // Use `WebSocket#terminate()` and not `WebSocket#close()`. Delay should be
+  // equal to the interval at which your server sends out pings plus a
+  // conservative assumption of the latency.
+  this.pingTimeout = setTimeout(() => {
+    this.terminate();
+  }, 30000 + 1000);
+}
+
+
 ws.on('open', function open() {
   wsutils.send(ws, {
     message: events.REGISTER,
     payload: null
   });
+});
+
+ws.on('ping', heartbeat);
+ws.on('close', function clear() {
+  clearTimeout(this.pingTimeout);
 });
 
 ws.on('message', (data) => {

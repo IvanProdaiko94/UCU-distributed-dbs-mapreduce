@@ -27,6 +27,12 @@ let finalResult;
 
 wss.on('connection', (ws) => {
   console.log(`connection opened. Current number of connections is ${wss.clients.size}`);
+  ws.isAlive = true;
+
+  ws.on('pong', function() {
+     this.isAlive = true;
+  });
+
   ws.on('message', (message) => {
     let msg;
     try {
@@ -68,10 +74,20 @@ wss.on('connection', (ws) => {
   });
 });
 
+const interval = setInterval(function ping() {
+  wss.clients.forEach(function each(ws) {
+    if (ws.isAlive === false) return ws.terminate();
+
+    ws.isAlive = false;
+    ws.ping(() => {});
+  });
+}, 30000);
+
 setTimeout(() => {
   if (config.slaveReplicationFactor !== wss.clients.size) {
     wss.close(() => {
       console.error(`Replication factor is not appropriate. Expect: ${config.slaveReplicationFactor}, got: ${wss.clients.size}`);
+      clearInterval(interval);
       process.exit(1);
     });
   }
