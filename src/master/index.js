@@ -25,8 +25,17 @@ const results = [];
 
 let finalResult;
 
+const availableIDs = [];
+
 wss.on('connection', (ws) => {
   console.log(`connection opened. Current number of connections is ${wss.clients.size}`);
+
+  if (wss.clients.size > config.slaveReplicationFactor) {
+    console.log('too many opened connections');
+    ws.disconnect();
+    return;
+  }
+
   ws.isAlive = true;
 
   ws.on('pong', function() {
@@ -44,6 +53,7 @@ wss.on('connection', (ws) => {
     console.log(msg);
     switch (msg.message) {
       case events.REGISTER:
+        let id = availableIDs.length > 0 ? availableIDs.pop() : wss.clients.size - 1;
         wsutils.send(ws, {
           message: events.REGISTER,
           payload: {
@@ -51,9 +61,10 @@ wss.on('connection', (ws) => {
               mapFile,
               groupByFile
             },
-            id: wss.clients.size - 1
+            id
           }
         });
+        ws.MAP_REDUCE_ID = id;
         return;
       case events.RESULT:
         results.push(msg.payload);
@@ -71,6 +82,11 @@ wss.on('connection', (ws) => {
           payload: null
         })
     }
+  });
+
+  ws.on('disconnect', () => {
+    ws.close();
+    availableIDs.push(ws.MAP_REDUCE_ID);
   });
 });
 
